@@ -1,0 +1,151 @@
+---
+title: "classsurvey"
+author: "Michael Tebeje"
+date: "2025-09-16"
+output: html_document
+---
+
+```{r}
+# Setup
+library(tidyverse)
+library(readr)
+
+```
+```{r}
+# Task 1: Import CSV and name it C1survey (assumes file is in working directory)
+C1survey <- read_csv("C:/Users/Michael/Downloads/Class 1 Survey Fall 2025 2.csv")
+
+```
+```{r}
+# Task 2:
+# a) Number of observations (rows)
+nrow(C1survey)
+
+# b) Number of variables (columns)
+ncol(C1survey)
+
+```
+```{r}
+# Task 3:
+# a) Rename to the provided list
+new_names <- c(
+  "id","like_cats","like_dogs","have_desert","slogan","fav_day","larkORowl",
+  "fav_food","fav_drink","fav_season","fav_month","hobby","program",
+  "specialization","stat_software","R_exp","coding_comfort","coding_length",
+  "top_three","public_health_interest","fav_num","bday","bmonth","country",
+  "state","city","highest_educ_level"
+)
+length(new_names) == ncol(C1survey)  # safety check
+names(C1survey) <- new_names
+
+# b) Display new names
+names(C1survey)
+
+```
+```{r}
+# Task 3:
+# a) Rename to the provided list
+new_names <- c(
+  "id","like_cats","like_dogs","have_desert","slogan","fav_day","larkORowl",
+  "fav_food","fav_drink","fav_season","fav_month","hobby","program",
+  "specialization","stat_software","R_exp","coding_comfort","coding_length",
+  "top_three","public_health_interest","fav_num","bday","bmonth","country",
+  "state","city","highest_educ_level"
+)
+length(new_names) == ncol(C1survey)  # safety check
+names(C1survey) <- new_names
+
+# b) Display new names
+names(C1survey)
+
+```
+```{r}
+# Task 4: Show classes and counts
+sapply(C1survey, class)
+table(sapply(C1survey, class))
+
+```
+```{r}
+# Task 5:
+# a) Check distributions
+table(C1survey$bday,   useNA = "ifany")
+table(C1survey$bmonth, useNA = "ifany")
+
+# b) Clean (documented plan in comments):
+# - bday: keep 1–31; extract day from text like "June 2nd", "15-Nov"; else NA.
+# - bmonth: keep 1–12; map text months (fix "septemeber"); else NA.
+
+library(dplyr)
+library(stringr)
+
+month_key <- c(jan=1,feb=2,mar=3,apr=4,may=5,jun=6,jul=7,aug=8,sep=9,oct=10,nov=11,dec=12)
+
+C1survey <- C1survey %>%
+  mutate(
+    # bday
+    bday_num_raw   = suppressWarnings(as.numeric(bday)),
+    bday_from_text = suppressWarnings(as.numeric(str_extract(bday, "\\b(\\d{1,2})(?=\\b|st|nd|rd|th)"))),
+    bday_clean     = coalesce(bday_num_raw, bday_from_text),
+    bday_clean     = if_else(!is.na(bday_clean) & bday_clean >= 1 & bday_clean <= 31, bday_clean, NA_real_),
+
+    # bmonth
+    bmonth_num_raw   = suppressWarnings(as.numeric(bmonth)),
+    bmonth_txt       = tolower(trimws(as.character(bmonth))),
+    bmonth_txt       = str_replace_all(bmonth_txt, c("septemeber" = "september")),
+    bmonth_3         = if_else(str_detect(bmonth_txt, "^[a-z]"), str_sub(bmonth_txt, 1, 3), NA_character_),
+    bmonth_from_text = unname(month_key[bmonth_3]),
+    bmonth_clean     = coalesce(
+      if_else(!is.na(bmonth_num_raw) & bmonth_num_raw >= 1 & bmonth_num_raw <= 12, bmonth_num_raw, NA_real_),
+      suppressWarnings(as.numeric(bmonth_from_text))
+    ),
+    bmonth_clean     = if_else(!is.na(bmonth_clean) & bmonth_clean >= 1 & bmonth_clean <= 12, bmonth_clean, NA_real_)
+  ) %>%
+  mutate(
+    bday   = bday_clean,
+    bmonth = bmonth_clean
+  ) %>%
+  select(-bday_num_raw, -bday_from_text, -bday_clean,
+         -bmonth_num_raw, -bmonth_txt, -bmonth_3, -bmonth_from_text, -bmonth_clean)
+
+# c) Medians (after cleaning; numeric-only)
+median(C1survey$bday,   na.rm = TRUE)
+median(C1survey$bmonth, na.rm = TRUE)
+
+```
+```{r}
+# Task 6:
+# a) Create bseason (Northern meteorological)
+C1survey <- C1survey %>%
+  mutate(
+    bseason = case_when(
+      bmonth %in% c(12,1,2) ~ "Winter",
+      bmonth %in% 3:5       ~ "Spring",
+      bmonth %in% 6:8       ~ "Summer",
+      bmonth %in% 9:11      ~ "Fall",
+      TRUE ~ NA_character_
+    ),
+    bseason = factor(bseason, levels = c("Winter","Spring","Summer","Fall"))
+  )
+
+# b) Table with rows=bmonth, cols=bseason
+tab_month_season <- table(bmonth = C1survey$bmonth, bseason = C1survey$bseason, useNA = "ifany")
+tab_month_season
+
+# c) Column sums = classmates per season
+colSums(tab_month_season, na.rm = TRUE)
+
+```
+```{r}
+#Task 7
+#
+library(dplyr)
+
+months_pop <- C1survey %>%
+  filter(!is.na(fav_month), fav_month != "") %>%
+  count(fav_month, name = "n", sort = TRUE)
+
+months_pop
+
+```
+
+
